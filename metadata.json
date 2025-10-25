@@ -1,0 +1,7 @@
+{
+  "name": "Weaver",
+  "description": "A creative social platform where you can collaborate with Gemini to write, design, and share captivating stories. Bring your imagination to life with AI-powered chapter generation, cover art creation, and more.",
+  "requestFramePermissions": [
+    "microphone"
+  ]
+}
