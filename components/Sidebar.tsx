@@ -1,6 +1,6 @@
 import React, { useContext } from 'react';
 import type { Page } from '../types';
-import { Home, BookOpen, User, GitBranch, Feather, ShoppingCart, LogOut } from 'lucide-react';
+import { Home, BookOpen, User, GitBranch, Feather, ShoppingCart, LogOut, HelpCircle, Globe, Lightbulb } from 'lucide-react';
 import { AppContext } from '../contexts/AppContext';
 import { useTranslation } from '../App';
 
@@ -36,8 +36,11 @@ const Sidebar: React.FC<SidebarProps> = ({ currentPage, setCurrentPage, onLogout
   const navItems = [
     { id: 'hub', label: t('hub'), icon: <Home size={20} /> },
     { id: 'stories', label: t('myStories'), icon: <BookOpen size={20} /> },
+    { id: 'universes', label: t('universes'), icon: <Globe size={20} /> },
+    { id: 'chat', label: t('ideasChat'), icon: <Lightbulb size={20} /> },
     { id: 'store', label: t('store'), icon: <ShoppingCart size={20} /> },
     { id: 'account', label: t('account'), icon: <User size={20} /> },
+    { id: 'guide', label: t('guide'), icon: <HelpCircle size={20} /> },
     { id: 'changelog', label: t('changelog'), icon: <GitBranch size={20} /> },
   ];
 

@@ -1,17 +1,22 @@
 import React, { useContext } from 'react';
-import type { Story, Challenge } from '../types';
-import { featuredStory, trendingStories, weeklyChallenge } from '../constants';
-import { Award, TrendingUp, PenSquare, Users, ArrowRight } from 'lucide-react';
 import { AppContext } from '../contexts/AppContext';
 import { useTranslation } from '../App';
+import { PenSquare, PlusCircle } from 'lucide-react';
+import { weeklyChallenge } from '../constants';
+import type { Story } from '../types';
 
-interface HubProps {
-    viewStory: (id: string) => void;
-    createNew: () => void;
-}
+const StoryCard: React.FC<{story: Story; onClick: () => void}> = ({ story, onClick }) => (
+    <div className="bg-gray-800 rounded-lg overflow-hidden cursor-pointer group transform hover:-translate-y-1 transition-all duration-300 shadow-lg" onClick={onClick}>
+        <img src={story.coverImageUrl} alt={story.title} className="w-full h-80 object-cover"/>
+        <div className="p-4">
+            <h3 className="font-bold text-lg text-white truncate group-hover:text-primary-500">{story.title}</h3>
+            <p className="text-sm text-gray-400 mt-1">{story.author}</p>
+        </div>
+    </div>
+)
 
-const Hub: React.FC<HubProps> = ({ viewStory, createNew }) => {
-  const { user } = useContext(AppContext);
+const Hub: React.FC<{ viewStory: (id: string) => void; createNew: () => void; }> = ({ viewStory, createNew }) => {
+  const { user, stories } = useContext(AppContext);
   const { t } = useTranslation();
 
   return (
@@ -24,62 +29,37 @@ const Hub: React.FC<HubProps> = ({ viewStory, createNew }) => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Main Column */}
         <div className="lg:col-span-2 space-y-8">
-            {/* Featured Story */}
             <section>
-                <h2 className="flex items-center text-2xl font-bold text-white mb-4">
-                    <Award className="text-yellow-400 mr-3" size={28}/>
-                    {t('featuredStory')}
-                </h2>
-                <div onClick={() => viewStory(featuredStory.id)} className="bg-gray-800 rounded-lg overflow-hidden cursor-pointer group flex flex-col md:flex-row">
-                    <img src={featuredStory.coverImageUrl} alt={featuredStory.title} className="w-full md:w-1/3 h-96 md:h-auto object-cover"/>
-                    <div className="p-6 flex flex-col justify-center">
-                        <h3 className="font-bold text-3xl text-white group-hover:text-primary-500 transition-colors">{featuredStory.title}</h3>
-                        <p className="text-md text-gray-400 mt-1 mb-4">by {featuredStory.author}</p>
-                        <p className="text-gray-300 line-clamp-3">{featuredStory.summary}</p>
-                        <span className="text-primary-500 font-semibold mt-4 flex items-center">
-                            {t('readMore')} <ArrowRight size={16} className="ml-2"/>
-                        </span>
-                    </div>
-                </div>
-            </section>
-            
-            {/* Community Forum */}
-            <section>
-                <h2 className="flex items-center text-2xl font-bold text-white mb-4">
-                    <Users className="text-primary-500 mr-3" size={28}/>
-                    {t('communityForum')}
-                </h2>
-                <div className="bg-gray-800 rounded-lg p-6">
-                    <p className="text-gray-400">{t('forumDescription')}</p>
-                    <button className="mt-4 bg-primary-500 hover:bg-primary-600 text-white font-bold py-2 px-4 rounded-lg">
-                        {t('goToForum')}
+                <div className="flex justify-between items-center mb-4">
+                    <h2 className="text-2xl font-bold text-white">
+                        {t('myStories')}
+                    </h2>
+                     <button 
+                        onClick={createNew}
+                        className="bg-primary-500 hover:bg-primary-600 text-white font-bold py-2 px-4 rounded-lg flex items-center transition-transform duration-200 hover:scale-105"
+                    >
+                        <PlusCircle size={20} className="mr-2" />
+                        {t('createNewStory')}
                     </button>
                 </div>
+                 {stories.length > 0 ? (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {stories.slice(0, 6).map(story => (
+                          <StoryCard key={story.id} story={story} onClick={() => viewStory(story.id)} />
+                        ))}
+                    </div>
+                ) : (
+                    <div className="text-center py-16 bg-gray-800 rounded-lg">
+                        <p className="text-gray-400">{t('emptyLibraryTitle')}</p>
+                        <p className="text-gray-500 text-sm">{t('emptyLibrarySubtitle')}</p>
+                    </div>
+                )}
             </section>
         </div>
 
         {/* Side Column */}
         <div className="space-y-8">
-            {/* Trending Now */}
-            <section>
-                <h2 className="flex items-center text-2xl font-bold text-white mb-4">
-                    <TrendingUp className="text-green-400 mr-3" size={28}/>
-                    {t('trending')}
-                </h2>
-                <div className="bg-gray-800 rounded-lg p-4 space-y-3">
-                    {trendingStories.map((story, index) => (
-                        <div key={story.id} onClick={() => viewStory(story.id)} className="flex items-center cursor-pointer group p-2 rounded-md hover:bg-gray-700">
-                           <span className="text-xl font-bold text-gray-500 mr-4">{index + 1}</span>
-                           <div>
-                               <h4 className="font-semibold text-white group-hover:text-primary-500">{story.title}</h4>
-                               <p className="text-sm text-gray-400">{story.author}</p>
-                           </div>
-                        </div>
-                    ))}
-                </div>
-            </section>
-
-             {/* Weekly Challenge */}
+            {/* Weekly Challenge */}
             <section>
                 <h2 className="flex items-center text-2xl font-bold text-white mb-4">
                     <PenSquare className="text-blue-400 mr-3" size={28}/>

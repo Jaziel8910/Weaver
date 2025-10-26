@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
 import type { User, Story } from '../types';
 import { Feather } from 'lucide-react';
-import { plans } from '../constants';
+import { initialStories, plans } from '../constants';
 import { decrypt } from '../services/cryptoService';
 import Spinner from '../components/Spinner';
 import { useTranslation } from '../App';
@@ -170,6 +170,22 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLoginSuccess }) => {
       }
   };
 
+  const handleGuestLogin = () => {
+    const freePlan = plans.find(p => p.name === 'Free')!;
+    const guestUser: User = {
+      name: 'Guest',
+      email: `guest-${Date.now()}@weaver.app`,
+      isGuest: true,
+      avatarUrl: `https://api.dicebear.com/8.x/bottts/svg?seed=guest`,
+      weBucks: 250,
+      weTokens: freePlan.weTokenAllowance,
+      lastWeTokenRefresh: Date.now(),
+      plan: { tier: 'Free' },
+      inventory: { themes: [], features: [] },
+    };
+    onLoginSuccess(guestUser, initialStories);
+  };
+
 
   const renderContent = () => {
       if (isLoading) {
@@ -322,13 +338,14 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLoginSuccess }) => {
           {(view === 'forgot_password_email' || view === 'forgot_password_question' || view === 'forgot_password_reset') && <>{t('rememberPassword')} <button onClick={() => { setView('login'); setError(''); }} className="link">{t('login')}</button></>}
         </p>
          {view === 'login' && (
-             <div className="relative">
-                <div className="absolute inset-0 flex items-center"><span className="w-full border-t border-gray-600"></span></div>
-                <div className="relative flex justify-center text-xs uppercase"><span className="bg-gray-800 px-2 text-gray-500">{t('or')}</span></div>
+             <div className="space-y-4">
+                 <div className="relative">
+                    <div className="absolute inset-0 flex items-center"><span className="w-full border-t border-gray-600"></span></div>
+                    <div className="relative flex justify-center text-xs uppercase"><span className="bg-gray-800 px-2 text-gray-500">{t('or')}</span></div>
+                 </div>
+                 <button onClick={handleGuestLogin} className="w-full py-3 bg-gray-600 hover:bg-gray-500 text-white font-medium rounded-lg">{t('continueAsGuest')}</button>
+                 <button onClick={() => { setView('import'); setError(''); }} className="w-full py-3 bg-gray-700 hover:bg-gray-600 text-white font-medium rounded-lg">{t('importAccount')}</button>
              </div>
-         )}
-         {view === 'login' && (
-            <button onClick={() => { setView('import'); setError(''); }} className="w-full py-3 bg-gray-700 hover:bg-gray-600 text-white font-medium rounded-lg">{t('importAccount')}</button>
          )}
       </div>
     </div>

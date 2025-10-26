@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useMemo, useEffect, createContext, useContext } from 'react';
-import { Page, Story, User, Language, Plan } from './types';
+import { Page, Story, User, Language, Plan, Universe, Character } from './types';
 import { initialStories, plans } from './constants';
 import Sidebar from './components/Sidebar';
 import Hub from './pages/Hub';
@@ -8,8 +8,13 @@ import Account from './pages/Account';
 import Changelog from './pages/Changelog';
 import CreateStory from './pages/CreateStory';
 import StoryViewer from './pages/StoryViewer';
+import StoryDetails from './pages/StoryDetails';
+import Guide from './pages/Guide';
 import Store from './pages/Store';
 import AuthPage from './pages/AuthPage';
+import Universes from './pages/Universes';
+import UniverseDetails from './pages/UniverseDetails';
+import Chat from './pages/Chat';
 import { AppContext } from './contexts/AppContext';
 import Spinner from './components/Spinner';
 
@@ -26,8 +31,10 @@ const locales = {
     store: 'Store',
     account: 'Account',
     changelog: 'Changelog',
+    guide: 'Guide',
     createNewStory: 'Create New Story',
     logout: 'Log Out',
+    ideasChat: 'Ideas Chat',
     // Hub
     welcome: 'Welcome,',
     hubSubtitle: "Discover what's new or start your next adventure.",
@@ -52,7 +59,7 @@ const locales = {
     earnMoreInStore: 'Earn more by completing missions in the Store!',
     membershipTiers: 'Membership Tiers',
     exportData: 'Export Data',
-    importData: 'Import Data',
+    importData: 'ImportData',
     language: 'Language',
     planExpires: 'Expires',
     never: 'Never',
@@ -89,9 +96,10 @@ const locales = {
     themesPlaceholder: 'e.g., Hope, Sacrifice, Identity',
     step2Title: 'Step 2: World-Building',
     universeName: 'Universe Name',
-    universeNamePlaceholder: 'e.g., Star Wars, Middle-earth, or your own',
-    isExistingUniverse: 'This is an existing universe.',
-    fetchUniverseInfo: 'Fetch Universe Info',
+    universeNamePlaceholder: 'e.g., Star-Fire Cycle, or your own new universe',
+    createNewUniverse: 'Create New Universe',
+    useExistingUniverse: 'Use Existing Universe',
+    selectAUniversePrompt: 'Select a universe...',
     keyLocations: 'Key Locations',
     keyLocationsPlaceholder: 'e.g., The Crystal Spires of Aethel, The Rust-Markets of Neo-Kyoto',
     factions: 'Factions / Groups',
@@ -115,6 +123,10 @@ const locales = {
     characterArc: 'Character Arc',
     dialogueVoice: 'Dialogue Voice',
     addCharacter: '+ Add Another Character',
+    importCharacter: 'Import from Universe',
+    importCharactersFrom: 'Import Characters from "{universeName}"',
+    noCanonicalCharacters: 'This universe has no canonical characters to import.',
+    importNCharacters: 'Import {count} Character(s)',
     step4Title: 'Step 4: Plot & Narrative',
     plotOutline: 'Plot Outline',
     plotOutlinePlaceholder: 'Briefly outline the main events of your story. What happens in the beginning, middle, and end?',
@@ -133,10 +145,21 @@ const locales = {
     literaryInfluencesPlaceholder: 'e.g., In the style of Tolkien, inspired by Blade Runner',
     coverArtStyle: 'Cover Art Style',
     weaveMyStory: 'Weave My Story! (-{cost} WeTokens)',
+    quickWeaveCost: 'Quick Weave (-{cost} WeTokens)',
     previous: 'Previous',
     next: 'Next',
     generatingTitle: 'Weaving your tale...',
     generatingSubtitle: 'Gemini is crafting your chapters and designing your cover. This may take a moment. The best stories are worth the wait!',
+    // Story Details
+    startReading: 'Start Reading',
+    details: 'Details',
+    synopsis: 'Synopsis',
+    universeAndLore: 'Universe & Lore',
+    tags: 'Tags',
+    contentRating: 'Content Rating',
+    showContentWarnings: 'Show Content Warnings',
+    thisStoryContains: 'This story contains content that may be sensitive to some readers, including:',
+    aiGeneratedNotice: 'AI-generated rating. May not be fully accurate.',
     // Story Viewer
     chapters: 'Chapters',
     autocompleteStory: 'Autocomplete Story',
@@ -164,6 +187,11 @@ const locales = {
     restore: 'Restore',
     savedOn: 'Saved on',
     noHistory: 'No version history available for this chapter.',
+    whatIfScenario: 'What-If? Scenario',
+    whatIfPrompt: 'What if...',
+    whatIfPlaceholder: 'e.g., Kael ignores the message and decides to retire to a farm.',
+    generateAlternativeScene: 'Generate Alternative Scene (-{cost} WT)',
+    whatIfBenefit: 'Create "What-If?" alternative story branches',
     // Chatbot
     chatbotGreeting: "Hi! I'm your story assistant. Ask me about the plot, or switch to Character Chat to talk to someone from the story.",
     analyzeStory: 'Analyze Story',
@@ -213,6 +241,60 @@ const locales = {
     incorrectAnswer: 'Incorrect answer. Please try again.',
     passwordResetSuccess: 'Password successfully reset! Please log in with your new password.',
     genericError: 'Something went wrong. Please start over.',
+    continueAsGuest: 'Continue as Guest',
+     // Guide
+    guideTitle: 'Weaver Guide',
+    guideSubtitle: 'Your complete manual for mastering the art of storytelling with Weaver and Gemini.',
+    faq: 'Frequently Asked Questions',
+    gettingStarted: 'Getting Started',
+    coreFeatures: 'Core Features',
+    advancedFeatures: 'Advanced Features',
+    economy: 'WeBucks & WeTokens',
+    plansAndTiers: 'Plans & Tiers',
+    contentRatingSystem: 'Understanding the Content Rating System',
+    // Universes
+    universes: 'Universes',
+    crystallize: 'Crystallize',
+    crystallizeDescription: 'Analyze all stories in this universe with Gemini to generate a cohesive timeline, description, and character list.',
+    canon: 'Canon',
+    notebook: 'Notebook',
+    rules: 'Universe Rules',
+    rulesPlaceholder: 'e.g., 1. Magic always requires a sacrifice.\n2. FTL travel corrupts organic matter.',
+    timeline: 'Timeline',
+    generateTimeline: 'Generate Timeline with AI',
+    canonicalCharacters: 'Canonical Characters',
+    crossover: 'Fanfic Crossover',
+    crossoverDescription: 'ULTRA PLAN: Use Gemini to insert your characters into existing franchises!',
+    franchise: 'Franchise Name (e.g., Star Wars, Harry Potter)',
+    fetchLore: 'Fetch Lore with Grounded Search',
+    lore: 'Fetched Lore',
+    infiltrate: 'Infiltrate Character',
+    scenario: 'Scenario Prompt',
+    scenarioPlaceholder: 'e.g., Elara appears during the Sorting Hat ceremony.',
+    generateCrossoverChapter: 'Generate Crossover Chapter',
+    generateCrossoverArt: 'Generate Concept Art',
+    characterSheet: 'Character Sheet',
+    conceptArt: 'Concept Art',
+    generateArt: 'Generate Art',
+    saveChanges: 'Save Changes',
+    universeDescription: 'Universe Description',
+    universeCreatedSuccess: 'Universe "{universeName}" created successfully!',
+    promptCreateFirstStory: 'Would you like to write the first story in it?',
+    createStory: 'Create Story',
+    notNow: 'Not Now',
+    // Ideas Chat
+    chatTitle: 'Ideas Chat',
+    chatSubtitle: 'Your personal AI brainstorming partner for plot, lore, and characters.',
+    chatMode: 'Mode',
+    ideasGenerator: 'Ideas Generator',
+    loreConsultant: 'Lore Consultant',
+    characterRoleplay: 'Character Roleplay',
+    selectUniverse: 'Select a Universe',
+    selectCharacter: 'Select a Character',
+    chatPlaceholderIdeas: 'e.g., I need a plot twist for my sci-fi story...',
+    chatPlaceholderLore: 'e.g., How does magic work in this universe?',
+    chatPlaceholderCharacter: 'e.g., What would you do if you were betrayed?',
+    
   },
   es: {
     // General
@@ -224,8 +306,10 @@ const locales = {
     store: 'Tienda',
     account: 'Cuenta',
     changelog: 'Cambios',
+    guide: 'Guía',
     createNewStory: 'Crear Nueva Historia',
     logout: 'Cerrar Sesión',
+    ideasChat: 'Chat de Ideas',
     // Hub
     welcome: 'Bienvenido,',
     hubSubtitle: 'Descubre qué hay de nuevo o comienza tu próxima aventura.',
@@ -287,9 +371,10 @@ const locales = {
     themesPlaceholder: 'Ej: Esperanza, Sacrificio, Identidad',
     step2Title: 'Paso 2: Construcción del Mundo',
     universeName: 'Nombre del Universo',
-    universeNamePlaceholder: 'Ej: Star Wars, Tierra Media, o el tuyo propio',
-    isExistingUniverse: 'Este es un universo existente.',
-    fetchUniverseInfo: 'Obtener Información del Universo',
+    universeNamePlaceholder: 'Ej: Ciclo del Fuego Estelar, o tu propio universo nuevo',
+    createNewUniverse: 'Crear Nuevo Universo',
+    useExistingUniverse: 'Usar Universo Existente',
+    selectAUniversePrompt: 'Selecciona un universo...',
     keyLocations: 'Lugares Clave',
     keyLocationsPlaceholder: 'Ej: Las Agujas de Cristal de Aethel, Los Mercados de Óxido de Neo-Kyoto',
     factions: 'Facciones / Grupos',
@@ -313,6 +398,10 @@ const locales = {
     characterArc: 'Arco del Personaje',
     dialogueVoice: 'Voz de Diálogo',
     addCharacter: '+ Añadir Otro Personaje',
+    importCharacter: 'Importar desde Universo',
+    importCharactersFrom: 'Importar Personajes de "{universeName}"',
+    noCanonicalCharacters: 'Este universo no tiene personajes canónicos para importar.',
+    importNCharacters: 'Importar {count} Personaje(s)',
     step4Title: 'Paso 4: Trama y Narrativa',
     plotOutline: 'Esquema de la Trama',
     plotOutlinePlaceholder: 'Describe brevemente los eventos principales de tu historia. ¿Qué sucede al principio, en el medio y al final?',
@@ -331,10 +420,21 @@ const locales = {
     literaryInfluencesPlaceholder: 'Ej: Al estilo de Tolkien, inspirado en Blade Runner',
     coverArtStyle: 'Estilo de Arte de Portada',
     weaveMyStory: '¡Tejer Mi Historia! (-{cost} WeTokens)',
+    quickWeaveCost: 'Tejido Rápido (-{cost} WeTokens)',
     previous: 'Anterior',
     next: 'Siguiente',
     generatingTitle: 'Tejiendo tu relato...',
     generatingSubtitle: 'Gemini está creando tus capítulos y diseñando tu portada. Esto puede tardar un momento. ¡Las mejores historias merecen la pena la espera!',
+    // Story Details
+    startReading: 'Empezar a Leer',
+    details: 'Detalles',
+    synopsis: 'Sinopsis',
+    universeAndLore: 'Universo y Lore',
+    tags: 'Etiquetas',
+    contentRating: 'Clasificación de Contenido',
+    showContentWarnings: 'Mostrar Advertencias de Contenido',
+    thisStoryContains: 'Esta historia contiene material que puede ser sensible para algunos lectores, incluyendo:',
+    aiGeneratedNotice: 'Clasificación generada por IA. Puede no ser totalmente precisa.',
     // Story Viewer
     chapters: 'Capítulos',
     autocompleteStory: 'Autocompletar Historia',
@@ -362,6 +462,11 @@ const locales = {
     restore: 'Restaurar',
     savedOn: 'Guardado el',
     noHistory: 'No hay historial de versiones para este capítulo.',
+    whatIfScenario: 'Escenario "¿Qué pasaría si...?"',
+    whatIfPrompt: '¿Qué pasaría si...',
+    whatIfPlaceholder: 'Ej: Kael ignora el mensaje y decide retirarse a una granja.',
+    generateAlternativeScene: 'Generar Escena Alternativa (-{cost} WT)',
+    whatIfBenefit: 'Crear ramas de historia alternativas "¿Qué pasaría si...?"',
     // Chatbot
     chatbotGreeting: '¡Hola! Soy tu asistente de historia. Pregúntame sobre la trama o cambia a Chat de Personaje para hablar con alguien de la historia.',
     analyzeStory: 'Analizar Historia',
@@ -411,6 +516,59 @@ const locales = {
     incorrectAnswer: 'Respuesta incorrecta. Por favor, inténtalo de nuevo.',
     passwordResetSuccess: '¡Contraseña restablecida con éxito! Por favor, inicia sesión con tu nueva contraseña.',
     genericError: 'Algo salió mal. Por favor, empieza de nuevo.',
+    continueAsGuest: 'Continuar como Invitado',
+     // Guide
+    guideTitle: 'Guía de Weaver',
+    guideSubtitle: 'Tu manual completo para dominar el arte de contar historias con Weaver y Gemini.',
+    faq: 'Preguntas Frecuentes',
+    gettingStarted: 'Para Empezar',
+    coreFeatures: 'Funciones Principales',
+    advancedFeatures: 'Funciones Avanzadas',
+    economy: 'WeBucks y WeTokens',
+    plansAndTiers: 'Planes y Niveles',
+    contentRatingSystem: 'Entendiendo el Sistema de Clasificación',
+    // Universes
+    universes: 'Universos',
+    crystallize: 'Cristalizar',
+    crystallizeDescription: 'Analiza todas las historias de este universo con Gemini para generar una línea de tiempo, descripción y lista de personajes coherentes.',
+    canon: 'Canon',
+    notebook: 'Libreta',
+    rules: 'Reglas del Universo',
+    rulesPlaceholder: 'Ej: 1. La magia siempre requiere un sacrificio.\n2. Los viajes FTL corrompen la materia orgánica.',
+    timeline: 'Línea de Tiempo',
+    generateTimeline: 'Generar Línea de Tiempo con IA',
+    canonicalCharacters: 'Personajes Canónicos',
+    crossover: 'Crossover de Fanfic',
+    crossoverDescription: '¡PLAN ULTRA: Usa Gemini para insertar a tus personajes en franquicias existentes!',
+    franchise: 'Nombre de la Franquicia (ej: Star Wars, Harry Potter)',
+    fetchLore: 'Obtener Lore con Búsqueda Fundamentada',
+    lore: 'Lore Obtenido',
+    infiltrate: 'Infiltrar Personaje',
+    scenario: 'Prompt del Escenario',
+    scenarioPlaceholder: 'Ej: Elara aparece durante la ceremonia del Sombrero Seleccionador.',
+    generateCrossoverChapter: 'Generar Capítulo Crossover',
+    generateCrossoverArt: 'Generar Arte Conceptual',
+    characterSheet: 'Ficha de Personaje',
+    conceptArt: 'Arte Conceptual',
+    generateArt: 'Generar Arte',
+    saveChanges: 'Guardar Cambios',
+    universeDescription: 'Descripción del Universo',
+    universeCreatedSuccess: '¡Universo "{universeName}" creado con éxito!',
+    promptCreateFirstStory: '¿Te gustaría escribir la primera historia en él?',
+    createStory: 'Crear Historia',
+    notNow: 'Ahora No',
+    // Ideas Chat
+    chatTitle: 'Chat de Ideas',
+    chatSubtitle: 'Tu compañero de brainstorming personal para tramas, lore y personajes.',
+    chatMode: 'Modo',
+    ideasGenerator: 'Generador de Ideas',
+    loreConsultant: 'Consultor de Lore',
+    characterRoleplay: 'Roleplay de Personaje',
+    selectUniverse: 'Selecciona un Universo',
+    selectCharacter: 'Selecciona un Personaje',
+    chatPlaceholderIdeas: 'Ej: Necesito un giro de guion para mi historia de ciencia ficción...',
+    chatPlaceholderLore: 'Ej: ¿Cómo funciona la magia en este universo?',
+    chatPlaceholderCharacter: 'Ej: ¿Qué harías si te traicionaran?',
   }
 };
 
@@ -475,6 +633,7 @@ const storage = {
     } else {
       localStorage.removeItem('weaver_user');
       localStorage.removeItem('weaver_stories');
+      localStorage.removeItem('weaver_universes');
     }
   },
   getStories: (): Story[] | null => {
@@ -487,136 +646,164 @@ const storage = {
   },
   setStories: (stories: Story[]) => {
       localStorage.setItem('weaver_stories', btoa(JSON.stringify(stories)));
-  }
+  },
+  getUniverses: (): Universe[] | null => {
+      try {
+        const data = localStorage.getItem('weaver_universes');
+        return data ? JSON.parse(atob(data)) : null;
+      } catch (e) {
+          return null;
+      }
+  },
+  setUniverses: (universes: Universe[]) => {
+      localStorage.setItem('weaver_universes', btoa(JSON.stringify(universes)));
+  },
 };
-
 
 const App: React.FC = () => {
   const [user, setUserState] = useState<User | null>(null);
+  const [stories, setStoriesState] = useState<Story[]>([]);
+  const [universes, setUniversesState] = useState<Universe[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState<Page>('hub');
-  const [stories, setStoriesState] = useState<Story[]>(initialStories);
-  const [activeStoryId, setActiveStoryId] = useState<string | null>(null);
-  
-  const setStories = (newStories: Story[]) => {
-      setStoriesState(newStories);
-      if (user) { // Only save stories if a user is logged in
-          storage.setStories(newStories);
-      }
-  };
+  const [activeStory, setActiveStory] = useState<Story | null>(null);
+  const [activeUniverse, setActiveUniverse] = useState<Universe | null>(null);
+  const [storyCreationUniverseId, setStoryCreationUniverseId] = useState<string | null>(null);
+
 
   useEffect(() => {
-    let loggedInUser = storage.getUser();
+    const loggedInUser = storage.getUser();
     if (loggedInUser) {
-      const now = Date.now();
-      // Check for expired plans
-      if (loggedInUser.plan.expires && loggedInUser.plan.expires < now) {
-        loggedInUser.plan = { tier: 'Free' };
-      }
-
-      // Check for WeToken refresh
-      const userPlanDetails = plans.find(p => p.name === loggedInUser.plan.tier);
-      if (userPlanDetails && userPlanDetails.weTokenRefreshDays) {
-          const refreshInterval = userPlanDetails.weTokenRefreshDays * 24 * 60 * 60 * 1000;
-          if (now - loggedInUser.lastWeTokenRefresh > refreshInterval) {
-              loggedInUser = {
-                  ...loggedInUser,
-                  weTokens: (loggedInUser.weTokens || 0) + userPlanDetails.weTokenAllowance,
-                  lastWeTokenRefresh: now
-              };
-          }
-      }
+      let loadedStories = storage.getStories();
+      let loadedUniverses = storage.getUniverses();
       
-      const userStories = storage.getStories();
-      if (userStories) {
-          setStoriesState(userStories);
-      } else {
-          // If no stories are in storage for this user, use the initial ones (for demo)
-          setStoriesState(initialStories);
-          storage.setStories(initialStories);
-      }
+      if (!loadedStories) loadedStories = [];
+      if (!loadedUniverses) loadedUniverses = [];
       
-      storage.setUser(loggedInUser);
       setUserState(loggedInUser);
+      setStoriesState(loadedStories);
+      setUniversesState(loadedUniverses);
     }
     setIsLoading(false);
   }, []);
 
-  const setUser = (user: User | null) => {
-    setUserState(user);
-    storage.setUser(user);
-  };
-  
-  const handleLoginSuccess = (loggedInUser: User, importedStories?: Story[]) => {
-      setUser(loggedInUser);
-      if (importedStories) {
-          setStories(importedStories); // Set and save imported stories
-      } else {
-          // For regular login, load their saved stories or default ones
-          const userStories = storage.getStories();
-          setStoriesState(userStories || initialStories);
-      }
-  };
-  
-  const consumeWeTokens = (amount: number): boolean => {
-      if (user && user.weTokens >= amount) {
-          setUser({ ...user, weTokens: user.weTokens - amount });
-          return true;
-      }
-      alert("You don't have enough WeTokens for this action!");
-      return false;
+  const setUser = (newUser: User | null) => {
+    setUserState(newUser);
+    storage.setUser(newUser);
   };
 
-  const addStory = (newStory: Story) => {
-    const newStories = [newStory, ...stories];
-    setStories(newStories);
-    setActiveStoryId(newStory.id);
-    setCurrentPage('story-viewer');
-    if (user && stories.length === 0) {
-        setUser({ ...user, weBucks: user.weBucks + 150 });
+  const setStories = (newStories: Story[]) => {
+      setStoriesState(newStories);
+      storage.setStories(newStories);
+  }
+  
+  const setUniverses = (newUniverses: Universe[]) => {
+      setUniversesState(newUniverses);
+      storage.setUniverses(newUniverses);
+  }
+
+  const handleLogin = (loggedInUser: User, importedStories?: Story[]) => {
+    setUser(loggedInUser);
+    if (importedStories) {
+      setStories(importedStories);
+    } else {
+      const userStories = storage.getStories() || [];
+      const userUniverses = storage.getUniverses() || [];
+      setStories(userStories);
+      setUniverses(userUniverses);
     }
-  };
-  
-  const updateStory = (updatedStory: Story) => {
-    const newStories = stories.map(story => story.id === updatedStory.id ? updatedStory : story)
-    setStories(newStories);
-  };
-
-  const viewStory = (storyId: string) => {
-    setActiveStoryId(storyId);
-    setCurrentPage('story-viewer');
+    setCurrentPage('hub');
   };
 
   const handleLogout = () => {
     setUser(null);
-    // Also clear their stories from state to show defaults for next login
-    setStoriesState(initialStories); 
-    setCurrentPage('hub');
+    setStories([]);
+    setActiveStory(null);
+    setActiveUniverse(null);
+  };
+  
+  const addStory = (newStory: Story) => {
+    const newStories = [newStory, ...stories];
+    setStories(newStories);
+
+    // If a new universe was created for this story, add it
+    if (!universes.some(u => u.name === newStory.universe)) {
+        addUniverse({
+            id: `uni-${Date.now()}`,
+            name: newStory.universe,
+            description: `The universe of ${newStory.universe}.`,
+            rules: [],
+            timeline: '',
+            storyIds: [newStory.id],
+            characters: newStory.characters,
+        });
+    } else {
+        // Otherwise, add story ID to existing universe
+        const newUniverses = universes.map(u => 
+            u.name === newStory.universe 
+            ? { ...u, storyIds: [...u.storyIds, newStory.id] } 
+            : u
+        );
+        setUniverses(newUniverses);
+    }
+
+    setActiveStory(newStory);
+    setCurrentPage('story-details');
+  };
+  
+  const addUniverse = (newUniverse: Universe) => {
+      const newUniverses = [newUniverse, ...universes];
+      setUniverses(newUniverses);
   };
 
-  const renderPage = useCallback(() => {
-    const activeStory = stories.find(s => s.id === activeStoryId);
-    switch (currentPage) {
-      case 'hub':
-        return <Hub viewStory={viewStory} createNew={() => setCurrentPage('create-story')} />;
-      case 'stories':
-        return <Stories createNew={() => setCurrentPage('create-story')} />;
-      case 'account':
-        return <Account />;
-      case 'changelog':
-        return <Changelog />;
-       case 'store':
-        return <Store />;
-      case 'create-story':
-        return <CreateStory />;
-      case 'story-viewer':
-        return activeStory ? <StoryViewer story={activeStory} updateStory={updateStory} /> : <Hub viewStory={viewStory} createNew={() => setCurrentPage('create-story')} />;
-      default:
-        return <Hub viewStory={viewStory} createNew={() => setCurrentPage('create-story')} />;
-    }
-  }, [currentPage, stories, activeStoryId]);
+  const updateStory = (updatedStory: Story) => {
+      const newStories = stories.map(s => s.id === updatedStory.id ? updatedStory : s);
+      setStories(newStories);
+      if (activeStory?.id === updatedStory.id) {
+          setActiveStory(updatedStory);
+      }
+  };
+  
+  const updateUniverse = (updatedUniverse: Universe) => {
+      const newUniverses = universes.map(u => u.id === updatedUniverse.id ? updatedUniverse : u);
+      setUniverses(newUniverses);
+      if (activeUniverse?.id === updatedUniverse.id) {
+          setActiveUniverse(updatedUniverse);
+      }
+  };
 
-  const contextValue = useMemo(() => ({
+  const viewStory = (storyId: string) => {
+      const story = stories.find(s => s.id === storyId);
+      if (story) {
+          setActiveStory(story);
+          setCurrentPage('story-details');
+      }
+  };
+  
+  const viewUniverse = (universeId: string) => {
+      const universe = universes.find(u => u.id === universeId);
+      if (universe) {
+          setActiveUniverse(universe);
+          setCurrentPage('universe-details');
+      }
+  };
+
+  const consumeWeTokens = (amount: number): boolean => {
+      if (!user) return false;
+      if (user.weTokens < amount) {
+          alert("You don't have enough WeTokens for this action. Visit the store to get more.");
+          return false;
+      }
+      setUser({ ...user, weTokens: user.weTokens - amount });
+      return true;
+  };
+
+  const startStoryInUniverse = (universeId: string) => {
+    setStoryCreationUniverseId(universeId);
+    setCurrentPage('create-story');
+  };
+
+  const appContextValue = {
     user,
     setUser,
     stories,
@@ -624,37 +811,55 @@ const App: React.FC = () => {
     viewStory,
     updateStory,
     consumeWeTokens,
-  }), [user, stories]);
-
-  if (isLoading) {
-    return (
-        <div className="flex items-center justify-center h-screen bg-gray-900">
-            <Spinner size={16} />
-        </div>
-    );
+    universes,
+    addUniverse,
+    updateUniverse,
+    viewUniverse,
+    startStoryInUniverse,
+  };
+  
+  const renderPage = () => {
+    switch(currentPage) {
+      case 'hub': return <Hub viewStory={viewStory} createNew={() => setCurrentPage('create-story')} />;
+      case 'stories': return <Stories createNew={() => setCurrentPage('create-story')} />;
+      case 'account': return <Account />;
+      case 'changelog': return <Changelog />;
+      case 'store': return <Store />;
+      case 'guide': return <Guide />;
+      case 'chat': return <Chat />;
+      case 'universes': return <Universes />;
+      case 'create-story': return <CreateStory initialUniverseId={storyCreationUniverseId} onCreationStarted={() => setStoryCreationUniverseId(null)} />;
+      case 'story-details': return activeStory ? <StoryDetails story={activeStory} readStory={() => setCurrentPage('story-viewer')} /> : <Stories createNew={() => setCurrentPage('create-story')} />;
+      case 'story-viewer': return activeStory ? <StoryViewer story={activeStory} updateStory={updateStory}/> : <Stories createNew={() => setCurrentPage('create-story')} />;
+      case 'universe-details': return activeUniverse ? <UniverseDetails universe={activeUniverse} /> : <Universes />;
+      default: return <Hub viewStory={viewStory} createNew={() => setCurrentPage('create-story')} />;
+    }
   }
 
+  if (isLoading) {
+    return <div className="flex items-center justify-center h-screen"><Spinner size={16} /></div>;
+  }
+  
   if (!user) {
-    return <AuthPage onLoginSuccess={handleLoginSuccess} />;
+    return <AuthPage onLoginSuccess={handleLogin} />;
   }
 
   return (
-    <AppContext.Provider value={contextValue}>
-        <div className="flex h-screen bg-gray-900 text-gray-200 font-sans">
-            <Sidebar currentPage={currentPage} setCurrentPage={setCurrentPage} onLogout={handleLogout} />
-            <main className="flex-1 overflow-y-auto">
-            {renderPage()}
-            </main>
-        </div>
+    <AppContext.Provider value={appContextValue}>
+      <div className="flex h-screen bg-gray-900 text-gray-200">
+        <Sidebar currentPage={currentPage} setCurrentPage={setCurrentPage} onLogout={handleLogout} />
+        <main className="flex-1 overflow-hidden">
+          {renderPage()}
+        </main>
+      </div>
     </AppContext.Provider>
   );
 };
 
-
-const AppWrapper: React.FC = () => (
+export default function AppWrapper() {
+  return (
     <LanguageProvider>
-        <App />
+      <App />
     </LanguageProvider>
-);
-
-export default AppWrapper;
+  );
+}

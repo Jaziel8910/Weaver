@@ -1,5 +1,5 @@
 import { createContext } from 'react';
-import type { User, Story } from '../types';
+import type { User, Story, Universe } from '../types';
 
 interface AppContextType {
   user: User | null;
@@ -9,6 +9,11 @@ interface AppContextType {
   viewStory: (storyId: string) => void;
   updateStory: (updatedStory: Story) => void;
   consumeWeTokens: (amount: number) => boolean;
+  universes: Universe[];
+  addUniverse: (newUniverse: Universe) => void;
+  updateUniverse: (updatedUniverse: Universe) => void;
+  viewUniverse: (universeId: string) => void;
+  startStoryInUniverse: (universeId: string) => void;
 }
 
 export const AppContext = createContext<AppContextType>({
@@ -19,4 +24,9 @@ export const AppContext = createContext<AppContextType>({
   viewStory: () => {},
   updateStory: () => {},
   consumeWeTokens: () => false,
+  universes: [],
+  addUniverse: () => {},
+  updateUniverse: () => {},
+  viewUniverse: () => {},
+  startStoryInUniverse: () => {},
 });

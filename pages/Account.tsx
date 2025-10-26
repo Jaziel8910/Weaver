@@ -9,6 +9,10 @@ import { encrypt } from '../services/cryptoService';
 
 const TierCard: React.FC<{plan: Plan; isActive: boolean;}> = ({plan, isActive}) => {
     const { t } = useTranslation();
+    const planBenefits = plan.name === 'Ultra' 
+        ? plan.benefits.map(b => b === 'Create "What-If?" alternative story branches' ? t('whatIfBenefit') : b)
+        : plan.benefits;
+
     return (
     <div className={`rounded-lg p-6 border-2 ${isActive ? 'border-primary-500 bg-gray-800' : 'border-gray-700 bg-gray-800/50'}`}>
         <div className="flex items-center mb-4">
@@ -16,7 +20,7 @@ const TierCard: React.FC<{plan: Plan; isActive: boolean;}> = ({plan, isActive}) 
             <h3 className="text-2xl font-bold ml-3">{plan.name}</h3>
         </div>
         <ul className="space-y-2 text-gray-400">
-            {plan.benefits.map((benefit, i) => (
+            {planBenefits.map((benefit, i) => (
                 <li key={i} className="flex items-start">
                     <svg className="w-4 h-4 mr-2 mt-1 text-green-400 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                         <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd"></path>

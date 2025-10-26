@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useContext, useRef } from 'react';
 import type { Story, Chapter, DialogueLine, ChatbotMessage, Character } from '../types';
-import { Menu, X, Settings, Type, Palette, AlignLeft, AlignJustify, Minus, Plus, Headphones, MessageSquare, Edit, Book, Save, Wand2, BookOpen, Send, Bot, User as UserIcon, History } from 'lucide-react';
-import { generateAudiobookContent, extractDialogues, generateDialogueAudio, autocompleteStory, generateChatResponse } from '../services/geminiService';
+import { Menu, X, Settings, Type, Palette, AlignLeft, AlignJustify, Minus, Plus, Headphones, MessageSquare, Edit, Book, Save, Wand2, BookOpen, Send, Bot, User as UserIcon, History, GitFork, Sparkles } from 'lucide-react';
+import { generateAudiobookContent, extractDialogues, generateDialogueAudio, autocompleteStory, generateChatResponse, generateAlternativeChapter } from '../services/geminiService';
 import Spinner from '../components/Spinner';
 import { AppContext } from '../contexts/AppContext';
 import { WE_TOKEN_COSTS } from '../constants';
@@ -62,6 +62,49 @@ const themeClasses = {
     sepia: 'bg-sepia-bg text-sepia-text',
     light: 'bg-light-bg text-light-text',
 };
+
+const WhatIfGenerator: React.FC<{
+    onGenerate: (prompt: string) => void;
+    isLoading: boolean;
+}> = ({ onGenerate, isLoading }) => {
+    const { t } = useTranslation();
+    const [prompt, setPrompt] = useState('');
+
+    const handleSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!prompt.trim() || isLoading) return;
+        onGenerate(prompt);
+        setPrompt('');
+    };
+
+    return (
+        <div className="mt-12 p-6 bg-gray-800/50 border-2 border-dashed border-purple-400/30 rounded-lg">
+            <h3 className="flex items-center text-xl font-bold text-purple-300 mb-3">
+                <Sparkles size={22} className="mr-3" />
+                {t('whatIfScenario')} (Ultra Plan)
+            </h3>
+            <p className="text-sm text-gray-400 mb-4">{t('whatIfPrompt')}</p>
+            <form onSubmit={handleSubmit}>
+                <textarea
+                    value={prompt}
+                    onChange={(e) => setPrompt(e.target.value)}
+                    className="w-full bg-gray-700 border border-gray-600 rounded-lg p-2 text-base"
+                    rows={2}
+                    placeholder={t('whatIfPlaceholder')}
+                    disabled={isLoading}
+                />
+                <button
+                    type="submit"
+                    className="mt-3 w-full flex items-center justify-center py-2 px-4 border border-transparent rounded-lg shadow-sm text-base font-medium text-white bg-purple-600 hover:bg-purple-700 disabled:bg-gray-500"
+                    disabled={isLoading || !prompt.trim()}
+                >
+                    {isLoading ? <Spinner size={6} /> : t('generateAlternativeScene', { cost: WE_TOKEN_COSTS.whatIfGeneration })}
+                </button>
+            </form>
+        </div>
+    );
+};
+
 
 const Chatbot: React.FC<{
     story: Story;
@@ -244,7 +287,7 @@ const DialogueView: React.FC<{
 };
 
 const StoryViewer: React.FC<StoryViewerProps> = ({ story, updateStory }) => {
-  const { consumeWeTokens } = useContext(AppContext);
+  const { user, consumeWeTokens } = useContext(AppContext);
   const { t } = useTranslation();
   const [selectedChapterIndex, setSelectedChapterIndex] = useState(0);
   const [isChapterSidebarOpen, setIsChapterSidebarOpen] = useState(false);
@@ -263,6 +306,7 @@ const StoryViewer: React.FC<StoryViewerProps> = ({ story, updateStory }) => {
   const [isGeneratingAudio, setIsGeneratingAudio] = useState(false);
 
   const [isAutocompleting, setIsAutocompleting] = useState(false);
+  const [isGeneratingWhatIf, setIsGeneratingWhatIf] = useState(false);
 
   const [settings, setSettings] = useState<ReadingSettings>({
       fontSize: 1.125,
@@ -346,6 +390,37 @@ const StoryViewer: React.FC<StoryViewerProps> = ({ story, updateStory }) => {
       setIsAutocompleting(false);
   };
 
+  const handleGenerateWhatIf = async (userPrompt: string) => {
+    if (!consumeWeTokens(WE_TOKEN_COSTS.whatIfGeneration)) return;
+    setIsGeneratingWhatIf(true);
+
+    const newChapterText = await generateAlternativeChapter(story, selectedChapterIndex, userPrompt);
+    
+    const lines = newChapterText.split('\n');
+    const title = lines[0].trim();
+    const content = lines.slice(1).join('\n').trim();
+
+    if (!title.startsWith('Chapter') || !content) {
+        alert("Failed to generate a valid chapter. Please try again with a different prompt.");
+        setIsGeneratingWhatIf(false);
+        return;
+    }
+
+    const newChapter: Chapter = {
+        title,
+        content,
+        isAlternative: true,
+        basedOnChapterIndex: selectedChapterIndex,
+        userPrompt,
+    };
+
+    const newChapters = [...story.chapters, newChapter];
+    updateStory({ ...story, chapters: newChapters });
+    setSelectedChapterIndex(newChapters.length - 1);
+
+    setIsGeneratingWhatIf(false);
+};
+
   const toggleAudiobook = async () => {
     if (audiobookSource) {
       audiobookSource.onended = null;
@@ -404,12 +479,17 @@ const StoryViewer: React.FC<StoryViewerProps> = ({ story, updateStory }) => {
           case 'read':
           default:
               return (
-                 <div 
-                    className={`prose prose-invert max-w-none leading-relaxed whitespace-pre-wrap selection:bg-primary-500/30 ${fontClass} ${textAlignClass}`}
-                    style={{ fontSize: `${settings.fontSize}rem`, color: 'inherit' }}
-                >
-                    <p>{selectedChapter.content}</p>
-                 </div>
+                 <>
+                    <div 
+                        className={`prose prose-invert max-w-none leading-relaxed whitespace-pre-wrap selection:bg-primary-500/30 ${fontClass} ${textAlignClass}`}
+                        style={{ fontSize: `${settings.fontSize}rem`, color: 'inherit' }}
+                    >
+                        <p>{selectedChapter.content}</p>
+                    </div>
+                    {user?.plan.tier === 'Ultra' && (
+                        <WhatIfGenerator onGenerate={handleGenerateWhatIf} isLoading={isGeneratingWhatIf} />
+                    )}
+                 </>
               );
       }
   };
@@ -424,24 +504,54 @@ const StoryViewer: React.FC<StoryViewerProps> = ({ story, updateStory }) => {
               </button>
          </div>
         <nav className="flex-1 overflow-y-auto p-2">
-            <ul>
-                {story.chapters.map((chapter, index) => (
-                    <li key={index}>
-                        <button 
-                            onClick={() => {
-                                setSelectedChapterIndex(index);
-                                setIsChapterSidebarOpen(false);
-                            }}
-                            className={`w-full text-left px-4 py-3 rounded-md transition-colors duration-200 ${
-                                index === selectedChapterIndex
-                                ? 'bg-primary-600 text-white font-semibold'
-                                : 'text-gray-300 hover:bg-gray-700 hover:text-white'
-                            }`}
-                        >
-                            {chapter.title}
-                        </button>
-                    </li>
-                ))}
+            <ul className="space-y-1">
+                {story.chapters.map((chapter, index) => {
+                    if (chapter.isAlternative) return null; // Rendered separately
+
+                    const alternatives = story.chapters.filter(
+                        (alt) => alt.isAlternative && alt.basedOnChapterIndex === index
+                    );
+
+                    return (
+                        <li key={index}>
+                            <button
+                                onClick={() => {
+                                    setSelectedChapterIndex(index);
+                                    setIsChapterSidebarOpen(false);
+                                }}
+                                className={`w-full text-left px-4 py-3 rounded-md transition-colors duration-200 flex items-center ${
+                                    index === selectedChapterIndex
+                                    ? 'bg-primary-600 text-white font-semibold'
+                                    : 'text-gray-300 hover:bg-gray-700 hover:text-white'
+                                }`}
+                            >
+                                <span className="truncate">{chapter.title}</span>
+                            </button>
+                            {alternatives.map((alt) => {
+                                const altIndex = story.chapters.indexOf(alt);
+                                return (
+                                    <div key={altIndex} className="pl-4 mt-1">
+                                        <button
+                                        onClick={() => {
+                                            setSelectedChapterIndex(altIndex);
+                                            setIsChapterSidebarOpen(false);
+                                        }}
+                                        className={`w-full text-left pl-3 pr-2 py-2 rounded-md transition-colors duration-200 flex items-center text-sm border-l-2 ${
+                                            altIndex === selectedChapterIndex
+                                            ? 'border-purple-400 bg-purple-500/20 text-purple-300 font-semibold'
+                                            : 'border-gray-600 text-gray-400 hover:bg-gray-700 hover:text-white'
+                                        }`}
+                                        title={alt.userPrompt}
+                                        >
+                                        <GitFork size={14} className="mr-2 opacity-70 flex-shrink-0" />
+                                        <span className="truncate">{alt.title}</span>
+                                        </button>
+                                    </div>
+                                );
+                            })}
+                        </li>
+                    );
+                })}
             </ul>
         </nav>
         <div className="p-4 border-t border-gray-700">
@@ -452,7 +562,7 @@ const StoryViewer: React.FC<StoryViewerProps> = ({ story, updateStory }) => {
       </aside>
       
       <aside className={`absolute z-40 w-96 bg-gray-800 h-full flex flex-col shadow-2xl transition-transform duration-300 ease-in-out right-0 ${isHistoryPanelOpen ? 'translate-x-0' : 'translate-x-full'}`}>
-        <div className="p-4 border-b border-gray-700 flex justify-between items-center">
+        <div className="p-4 border-b border-gray-700 flex justify-between items-center flex-shrink-0">
             <h2 className="text-xl font-bold text-white">{t('versionHistory')}</h2>
             <button onClick={() => setIsHistoryPanelOpen(false)} className="text-gray-400 hover:text-white">
                 <X size={24} />
